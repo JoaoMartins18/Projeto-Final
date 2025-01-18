@@ -11,7 +11,7 @@ from scipy.linalg import lu
 np.random.seed(42)
 num_points = 5
 adj_matrix = np.random.randint(1, 10, size=(num_points, num_points))
-np.fill_diagonal(adj_matrix, 0)  # Sem laços
+np.fill_diagonal(adj_matrix, 0)
 
 # Criando um dataframe para visualização
 df_adj_matrix = pd.DataFrame(adj_matrix, columns=[f"P{i+1}" for i in range(num_points)],
@@ -25,14 +25,17 @@ b = np.random.randint(1, 20, size=num_points)  # Vetor de demandas
 P, L, U = lu(adj_matrix)
 
 # Resolução do sistema LUx = b
-y = np.linalg.solve(L, np.dot(P.T, b))
-x = np.linalg.solve(U, y)
+y = np.linalg.solve(L, b) 
+x = np.linalg.solve(U, y) 
 
 print("\nResultados do sistema linear:")
 print(f"Demanda: {b}")
 print(f"Fluxos otimizados: {x}")
 
 # ----- Visualização dos resultados -----
+
+fluxos_ajustados = np.maximum(0, x) 
+
 # Matriz de adjacência como heatmap
 plt.figure(figsize=(8, 6))
 sns.heatmap(adj_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=df_adj_matrix.columns,
@@ -42,9 +45,9 @@ plt.xlabel("Pontos de Destino")
 plt.ylabel("Pontos de Origem")
 plt.show()
 
-# Fluxos otimizados
+# Fluxos otimizados ajustados (sem valores negativos)
 plt.figure(figsize=(8, 6))
-plt.bar(range(1, num_points + 1), x, color="skyblue")
+plt.bar(range(1, num_points + 1), fluxos_ajustados, color="skyblue")
 plt.title("Fluxos Otimizados")
 plt.xlabel("Ponto")
 plt.ylabel("Fluxo")
@@ -59,7 +62,7 @@ class PriorityQueue:
 
     def insert(self, item):
         self.queue.append(item)
-        self.queue.sort(key=lambda x: x[1])  # Ordenar por prioridade
+        self.queue.sort(key=lambda x: x[1], reverse=True)  # Ordenar por prioridade
 
     def pop(self):
         if not self.is_empty():
@@ -70,11 +73,13 @@ class PriorityQueue:
     def is_empty(self):
         return len(self.queue) == 0
 
-# Fila de prioridade simulando transporte
+# Fila de prioridade simulando transporte 
 pq = PriorityQueue()
 for i in range(num_points):
-    pq.insert((f"P{i+1}", x[i]))
+    fluxo = fluxos_ajustados[i]  
+    pq.insert((f"P{i+1}", fluxo))
 
 print("\nFila de prioridade de transporte (ordem de atendimento):")
 while not pq.is_empty():
-    print(pq.pop())
+    ponto, fluxo = pq.pop()
+    print(f"{ponto}: {fluxo:.2f}")
